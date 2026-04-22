@@ -1,13 +1,19 @@
-import { addKnowledgeItem, deleteKnowledgeItem, readKnowledgeItems } from "@/lib/knowledge-store";
+import {
+  addKnowledgeItem,
+  deleteKnowledgeItem,
+  readKnowledgeItems,
+} from "../../../lib/knowledge-store";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   try {
     const items = await readKnowledgeItems();
     return Response.json({ ok: true, items });
   } catch (error) {
-    console.error(error);
+    console.error("KNOWLEDGE GET ERROR:", error);
     return Response.json(
       { ok: false, message: "Bilgi kartları okunamadı." },
       { status: 500 }
@@ -52,7 +58,7 @@ export async function POST(request: Request) {
 
     return Response.json({ ok: true, item });
   } catch (error) {
-    console.error(error);
+    console.error("KNOWLEDGE POST ERROR:", error);
     return Response.json(
       { ok: false, message: "Bilgi kartı eklenemedi." },
       { status: 500 }
@@ -75,7 +81,7 @@ export async function DELETE(request: Request) {
     await deleteKnowledgeItem(id);
     return Response.json({ ok: true });
   } catch (error) {
-    console.error(error);
+    console.error("KNOWLEDGE DELETE ERROR:", error);
     return Response.json(
       { ok: false, message: "Bilgi kartı silinemedi." },
       { status: 500 }

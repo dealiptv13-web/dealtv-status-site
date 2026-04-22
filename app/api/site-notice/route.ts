@@ -1,6 +1,8 @@
-import { readSiteNotice, writeSiteNotice } from "@/lib/site-notice-store";
+import { readSiteNotice, writeSiteNotice } from "../../../lib/site-notice-store";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function normalizeBlock(block: any, fallbackTitle: string) {
   return {
@@ -16,13 +18,8 @@ function validateBlock(block: {
   message: string;
   durationSeconds: number;
 }) {
-  if (!block.title) {
-    return "Başlık zorunludur.";
-  }
-
-  if (!block.message) {
-    return "Mesaj zorunludur.";
-  }
+  if (!block.title) return "Başlık zorunludur.";
+  if (!block.message) return "Mesaj zorunludur.";
 
   if (
     !Number.isFinite(block.durationSeconds) ||
@@ -40,7 +37,7 @@ export async function GET() {
     const settings = await readSiteNotice();
     return Response.json({ ok: true, settings });
   } catch (error) {
-    console.error(error);
+    console.error("SITE NOTICE GET ERROR:", error);
     return Response.json(
       { ok: false, message: "Bildirim ayarları okunamadı." },
       { status: 500 }
@@ -77,7 +74,7 @@ export async function POST(request: Request) {
 
     return Response.json({ ok: true });
   } catch (error) {
-    console.error(error);
+    console.error("SITE NOTICE POST ERROR:", error);
     return Response.json(
       { ok: false, message: "Bildirim ayarları kaydedilemedi." },
       { status: 500 }
