@@ -1,0 +1,14 @@
+{
+  "welcomeNotice": {
+    "enabled": true,
+    "title": "DealTV Destek Merkezi",
+    "message": "Değerli kullanıcımız, bu platform DealTV kullanıcılarına özel olarak hazırlanmıştır. Burada yer alan araçlar ve destek alanları üzerinden birçok işlemi hızlıca gerçekleştirebilirsiniz. Sorununuz bu ekran üzerinden çözümlenmezse, sağ üst bölümde bulunan iletişim kanallarını kullanarak bizimle doğrudan bağlantıya geçebilir ve birebir canlı destek alabilirsiniz. İyi günler dileriz.",
+    "durationSeconds": 10
+  },
+  "specialNotice": {
+    "enabled": true,
+    "title": "MERHABA BEN İREMİ COK SEVİYORUM",
+    "message": "İREMİ COK SEVİYORUM CÜNKÜ BENİM İCİN BU SİTEYİ DENİYOR :) <3",
+    "durationSeconds": 10
+  }
+}

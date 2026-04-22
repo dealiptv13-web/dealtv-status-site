@@ -1,0 +1,20 @@
+[
+  {
+    "id": "titan",
+    "name": "Titan Panel",
+    "status": "Stabil",
+    "note": "Yayınlar sorunsuz çalışıyor."
+  },
+  {
+    "id": "5g",
+    "name": "5G Panel",
+    "status": "Stabil",
+    "note": "Şuan da herhangi bir problem bulunmuyor."
+  },
+  {
+    "id": "mpremium",
+    "name": "MPremium Panel",
+    "status": "Bakımda",
+    "note": "Planlı bakım işlemi devam ediyor."
+  }
+]

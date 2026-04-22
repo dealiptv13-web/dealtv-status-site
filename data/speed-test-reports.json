@@ -1,0 +1,22 @@
+[
+  {
+    "id": "1776877331253",
+    "username": "asdasdasdsa",
+    "panel": "",
+    "device": "asdasdas",
+    "connectionType": "Wi-Fi",
+    "appName": "dasdasdsad",
+    "issueType": "Donma",
+    "note": "asdasdad",
+    "ping": 10.350000000093132,
+    "download": 349.34497816025583,
+    "upload": 111.11111110344592,
+    "jitter": 5.399999999751647,
+    "qualityLabel": "Çok İyi",
+    "qualityScore": 95,
+    "qualityMessage": "Bağlantı kaliteniz oldukça iyi görünüyor. Donma veya kasma sorunu büyük ihtimalle internetten değil; cihaz, uygulama veya panel yoğunluğu gibi nedenlerden kaynaklanabilir.",
+    "createdAt": "2026-04-22T17:02:11.253Z",
+    "status": "Yeni",
+    "adminNote": ""
+  }
+]
