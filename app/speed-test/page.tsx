@@ -2,9 +2,6 @@
 
 import { useMemo, useState } from "react";
 
-
-
-
 type QualityLabel = "Çok İyi" | "İyi" | "Orta" | "Kötü" | "Çok Kötü";
 
 type QualityResult = {
@@ -43,7 +40,6 @@ function SpeedIcon() {
     >
       <path d="M20 13a8 8 0 1 0-16 0" />
       <path d="M12 13l4-4" />
-      <path d="M12 13h.01" />
     </svg>
   );
 }
@@ -81,10 +77,6 @@ function SendIcon() {
       <path d="M22 2 15 22l-4-9-9-4 20-7Z" />
     </svg>
   );
-}
-
-function Dot({ className }: { className: string }) {
-  return <span className={`inline-block h-2.5 w-2.5 rounded-full ${className}`} />;
 }
 
 function sleep(ms: number) {
@@ -141,7 +133,7 @@ function getQualityResult(values: TestValues): QualityResult {
       label: "Çok İyi",
       score,
       message:
-        "Bağlantı kaliteniz oldukça iyi görünüyor. Donma veya kasma sorunu büyük ihtimalle internetten değil; cihaz, uygulama veya panel yoğunluğu gibi nedenlerden kaynaklanabilir.",
+        "Bağlantı kaliteniz oldukça iyi görünüyor. Donma veya kasma sorunu büyük ihtimalle internet bağlantısından değil; cihaz, uygulama veya panel yoğunluğundan kaynaklanıyor olabilir.",
     };
   }
 
@@ -150,7 +142,7 @@ function getQualityResult(values: TestValues): QualityResult {
       label: "İyi",
       score,
       message:
-        "Bağlantınız genel olarak iyi durumda. Ara sıra oluşan sorunlar uygulama, cihaz performansı veya anlık ağ dalgalanmalarıyla ilgili olabilir.",
+        "Bağlantınız genel olarak iyi durumda. Küçük sorunlar anlık ağ dalgalanması, uygulama performansı veya cihaz kaynaklı olabilir.",
     };
   }
 
@@ -159,7 +151,7 @@ function getQualityResult(values: TestValues): QualityResult {
       label: "Orta",
       score,
       message:
-        "Bağlantınız kullanılabilir seviyede ancak tam stabil görünmüyor. Özellikle Wi-Fi kullanıyorsanız modeme yakın test yapmanız veya Ethernet ile tekrar denemeniz faydalı olabilir.",
+        "Bağlantınız kullanılabilir seviyede ancak tam stabil görünmüyor. Özellikle Wi-Fi kullanıyorsanız modeme yakın konumda veya Ethernet ile tekrar test etmek faydalı olabilir.",
     };
   }
 
@@ -176,7 +168,7 @@ function getQualityResult(values: TestValues): QualityResult {
     label: "Çok Kötü",
     score,
     message:
-      "Bağlantı kaliteniz oldukça zayıf görünüyor. Bu durumda yayın tarafında ciddi donma, çözünürlük düşmesi veya bağlantı kopmaları yaşanabilir.",
+      "Bağlantı kaliteniz oldukça zayıf görünüyor. Bu durumda yayınlarda ciddi donma, çözünürlük düşmesi veya bağlantı kopmaları yaşanabilir.",
   };
 }
 
@@ -186,32 +178,27 @@ function getQualityStyle(label: QualityLabel) {
       return {
         badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
         bar: "bg-emerald-500",
-        dot: "bg-emerald-500",
       };
     case "İyi":
       return {
         badge: "border-lime-200 bg-lime-50 text-lime-700",
         bar: "bg-lime-500",
-        dot: "bg-lime-500",
       };
     case "Orta":
       return {
         badge: "border-amber-200 bg-amber-50 text-amber-700",
         bar: "bg-amber-500",
-        dot: "bg-amber-500",
       };
     case "Kötü":
       return {
         badge: "border-orange-200 bg-orange-50 text-orange-700",
         bar: "bg-orange-500",
-        dot: "bg-orange-500",
       };
     case "Çok Kötü":
     default:
       return {
         badge: "border-rose-200 bg-rose-50 text-rose-700",
         bar: "bg-rose-500",
-        dot: "bg-rose-500",
       };
   }
 }
@@ -262,7 +249,7 @@ async function measureDownload() {
     const end = performance.now();
 
     const bytes = blob.size;
-    const durationSeconds = Math.max((end - start) / 1000, 0.2);
+    const durationSeconds = Math.max((end - start) / 1000, 0.25);
     const mbps = (bytes * 8) / durationSeconds / 1_000_000;
 
     attempts.push(mbps);
@@ -290,7 +277,7 @@ async function measureUpload() {
     });
 
     const end = performance.now();
-    const durationSeconds = Math.max((end - start) / 1000, 0.2);
+    const durationSeconds = Math.max((end - start) / 1000, 0.25);
     const mbps = (payload.byteLength * 8) / durationSeconds / 1_000_000;
 
     attempts.push(mbps);
@@ -349,7 +336,7 @@ export default function SpeedTestPage() {
         await sleep(35);
       }
 
-      setPhaseText("Gecikme ölçülüyor...");
+      setPhaseText("Gecikme analizi yapılıyor...");
       const pingResult = await measurePing();
       setValues((prev) => ({
         ...prev,
@@ -357,25 +344,26 @@ export default function SpeedTestPage() {
         jitter: pingResult.jitter,
       }));
 
-      for (let i = 9; i <= 38; i += 1) {
+      for (let i = 9; i <= 40; i += 1) {
         setProgress(i);
         await sleep(18);
       }
 
-      setPhaseText("İndirme kalitesi analiz ediliyor...");
+      setPhaseText("Bağlantı kararlılığı ölçülüyor...");
       const download = await measureDownload();
       setValues((prev) => ({
         ...prev,
         download,
       }));
 
-      for (let i = 39; i <= 72; i += 1) {
+      for (let i = 41; i <= 75; i += 1) {
         setProgress(i);
         await sleep(20);
       }
 
-      setPhaseText("Yükleme kalitesi analiz ediliyor...");
+      setPhaseText("Genel kalite puanı hesaplanıyor...");
       const upload = await measureUpload();
+
       const finalValues = {
         ping: pingResult.ping,
         jitter: pingResult.jitter,
@@ -385,16 +373,16 @@ export default function SpeedTestPage() {
 
       setValues(finalValues);
 
-      for (let i = 73; i <= 96; i += 1) {
+      for (let i = 76; i <= 96; i += 1) {
         setProgress(i);
-        await sleep(22);
+        await sleep(24);
       }
-
-      setPhaseText("Sonuç hazırlanıyor...");
-      await sleep(500);
 
       const quality = getQualityResult(finalValues);
       setResult(quality);
+
+      setPhaseText("Sonuç hazırlanıyor...");
+      await sleep(500);
 
       for (let i = 97; i <= 100; i += 1) {
         setProgress(i);
@@ -463,9 +451,8 @@ export default function SpeedTestPage() {
             Bağlantı Kalite Testi
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500 md:text-base">
-            Bu test tam anlamıyla profesyonel bir speedtest değil; bağlantı kalitesini,
-            gecikmeyi ve genel kullanım stabilitesini ölçerek donma veya kasma sorunlarının
-            internet kaynaklı olup olmadığını analiz etmeye yardımcı olur.
+            Bu test doğrudan hız değeri göstermek yerine bağlantı kalitenizi analiz eder ve
+            sonucu sade bir kalite seviyesi olarak sunar.
           </p>
         </div>
 
@@ -528,36 +515,6 @@ export default function SpeedTestPage() {
               >
                 {isRunning ? "Test Devam Ediyor..." : "Kalite Testini Başlat"}
               </button>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-[#e7ece9] bg-[#fbfcfc] p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Ping</p>
-                <p className="mt-2 text-lg font-semibold text-slate-800">
-                  {values.ping !== null ? `${values.ping} ms` : "-"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-[#e7ece9] bg-[#fbfcfc] p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Jitter</p>
-                <p className="mt-2 text-lg font-semibold text-slate-800">
-                  {values.jitter !== null ? `${values.jitter} ms` : "-"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-[#e7ece9] bg-[#fbfcfc] p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Download</p>
-                <p className="mt-2 text-lg font-semibold text-slate-800">
-                  {values.download !== null ? `${values.download} Mbps` : "-"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-[#e7ece9] bg-[#fbfcfc] p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Upload</p>
-                <p className="mt-2 text-lg font-semibold text-slate-800">
-                  {values.upload !== null ? `${values.upload} Mbps` : "-"}
-                </p>
-              </div>
             </div>
           </div>
 
