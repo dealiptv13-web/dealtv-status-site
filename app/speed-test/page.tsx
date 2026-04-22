@@ -1,6 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+
+type TestState = {
+  ping: number | null;
+  download: number | null;
+  upload: number | null;
+  jitter: number | null;
+};
 
 type FormState = {
   username: string;
@@ -12,29 +19,23 @@ type FormState = {
   note: string;
 };
 
-type TestValues = {
-  ping: number | null;
-  jitter: number | null;
-  download: number | null;
-  upload: number | null;
-};
-
-type QualityLabel = "Çok İyi" | "İyi" | "Orta" | "Kötü" | "Çok Kötü";
-
 type QualityResult = {
-  label: QualityLabel;
   score: number;
+  label: "Çok İyi" | "İyi" | "Orta" | "Kötü" | "Çok Kötü";
+  colorClass: string;
+  barClass: string;
   message: string;
+  tips: string[];
 };
 
-function SpeedIcon() {
+function GaugeIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
       className="h-6 w-6"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -44,53 +45,53 @@ function SpeedIcon() {
   );
 }
 
-function RadarIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <path d="M12 12 18 9" />
-    </svg>
-  );
-}
-
-function SendIcon() {
+function SparkIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M22 2 11 13" />
-      <path d="M22 2 15 22l-4-9-9-4 20-7Z" />
+      <path d="M12 3l1.8 3.6L18 8.4l-3 2.9.7 4.1L12 13.7 8.3 15.4 9 11.3 6 8.4l4.2-.8L12 3z" />
     </svg>
   );
 }
 
-function CheckIcon() {
+function ShieldIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.4"
+      strokeWidth="2.2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M20 6 9 17l-5-5" />
+      <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" />
+    </svg>
+  );
+}
+
+function BotIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="4" y="8" width="16" height="10" rx="4" />
+      <path d="M12 4v4" />
+      <path d="M9 13h.01" />
+      <path d="M15 13h.01" />
     </svg>
   );
 }
@@ -99,181 +100,148 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
+function getQualityResult(result: TestState, form: FormState): QualityResult | null {
+  const { ping, download, upload, jitter } = result;
 
-function average(values: number[]) {
-  if (!values.length) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function getQualityResult(values: TestValues): QualityResult {
-  const ping = values.ping ?? 999;
-  const jitter = values.jitter ?? 999;
-  const download = values.download ?? 0;
-  const upload = values.upload ?? 0;
+  if (ping == null || download == null || upload == null) {
+    return null;
+  }
 
   let score = 100;
+  const tips: string[] = [];
 
-  if (ping <= 25) score -= 0;
-  else if (ping <= 45) score -= 5;
-  else if (ping <= 70) score -= 12;
-  else if (ping <= 100) score -= 22;
-  else if (ping <= 150) score -= 34;
-  else score -= 45;
+  if (download < 8) score -= 35;
+  else if (download < 15) score -= 22;
+  else if (download < 25) score -= 12;
+  else if (download < 40) score -= 5;
 
-  if (jitter <= 5) score -= 0;
-  else if (jitter <= 10) score -= 4;
-  else if (jitter <= 20) score -= 10;
-  else if (jitter <= 35) score -= 18;
-  else score -= 28;
+  if (upload < 2) score -= 15;
+  else if (upload < 5) score -= 8;
+  else if (upload < 10) score -= 3;
 
-  if (download >= 80) score += 6;
-  else if (download >= 40) score += 3;
-  else if (download >= 20) score += 0;
-  else if (download >= 10) score -= 5;
-  else if (download >= 5) score -= 12;
-  else score -= 18;
+  if (ping > 150) score -= 30;
+  else if (ping > 100) score -= 20;
+  else if (ping > 70) score -= 10;
+  else if (ping > 40) score -= 4;
 
-  if (upload >= 20) score += 4;
-  else if (upload >= 10) score += 2;
-  else if (upload >= 5) score += 0;
-  else if (upload >= 2) score -= 4;
-  else score -= 8;
+  if (jitter != null) {
+    if (jitter > 40) score -= 20;
+    else if (jitter > 25) score -= 10;
+    else if (jitter > 15) score -= 5;
+  }
 
-  score = clamp(Math.round(score), 1, 100);
+  if (form.connectionType === "Wi-Fi") {
+    score -= 5;
+    tips.push("Mümkünse Ethernet ile tekrar test edin.");
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  if (download < 15) {
+    tips.push("İnternet hızınız yayın için düşük olabilir.");
+  }
+
+  if (ping > 80) {
+    tips.push("Gecikme yüksek görünüyor, canlı yayınlarda donma yaşanabilir.");
+  }
+
+  if ((jitter ?? 0) > 20) {
+    tips.push("Bağlantınız dalgalanıyor, modeme yakın test yapmanız faydalı olabilir.");
+  }
+
+  if (form.connectionType === "Wi-Fi") {
+    tips.push("Wi-Fi kaynaklı kararsızlık ihtimali bulunuyor.");
+  }
 
   if (score >= 85) {
     return {
-      label: "Çok İyi",
       score,
+      label: "Çok İyi",
+      colorClass: "text-emerald-700",
+      barClass: "from-emerald-400 to-emerald-600",
       message:
-        "Bağlantı kalitesi oldukça iyi görünüyor. Sorun internetten çok cihaz, uygulama veya panel yoğunluğundan kaynaklanıyor olabilir.",
+        "Bağlantı kaliteniz oldukça iyi görünüyor. Donma veya kasma sorunu büyük ihtimalle internetten değil; cihaz, uygulama veya panel yoğunluğu gibi nedenlerden kaynaklanabilir.",
+      tips:
+        tips.length > 0
+          ? tips.slice(0, 2)
+          : ["Bağlantı genel kullanım için yeterli görünüyor."],
     };
   }
 
   if (score >= 70) {
     return {
-      label: "İyi",
       score,
+      label: "İyi",
+      colorClass: "text-lime-700",
+      barClass: "from-lime-300 to-emerald-500",
       message:
-        "Bağlantı genel olarak iyi durumda. Küçük dalgalanmalar dışında ciddi bir problem görünmüyor.",
+        "Bağlantı kaliteniz genel olarak iyi görünüyor. Normal kullanımda yeterli olabilir ancak yoğun saatlerde kısa süreli sorunlar yaşanabilir.",
+      tips:
+        tips.length > 0
+          ? tips.slice(0, 3)
+          : ["Yoğun saatlerde tekrar test etmeniz önerilir."],
     };
   }
 
   if (score >= 50) {
     return {
-      label: "Orta",
       score,
+      label: "Orta",
+      colorClass: "text-amber-700",
+      barClass: "from-amber-300 to-yellow-500",
       message:
-        "Bağlantı kullanılabilir seviyede ancak tam stabil görünmüyor. Özellikle Wi-Fi kullanıyorsanız tekrar kontrol faydalı olabilir.",
+        "Bağlantı kaliteniz orta seviyede görünüyor. Zaman zaman donma, kalite düşmesi veya gecikme yaşanabilir.",
+      tips:
+        tips.length > 0
+          ? tips.slice(0, 3)
+          : ["Bağlantı kararlılığı kontrol edilmelidir."],
     };
   }
 
   if (score >= 30) {
     return {
-      label: "Kötü",
       score,
+      label: "Kötü",
+      colorClass: "text-orange-700",
+      barClass: "from-orange-300 to-orange-500",
       message:
-        "Bağlantı kalitesi düşük görünüyor. Donma ve kasma internet bağlantısından kaynaklanıyor olabilir.",
+        "Bağlantı kaliteniz düşük görünüyor. Donma ve kasma sorununun temel sebebi büyük ihtimalle internet bağlantısı veya Wi-Fi kararsızlığı olabilir.",
+      tips:
+        tips.length > 0
+          ? tips.slice(0, 4)
+          : ["Modeme yakın test yapın ve mümkünse Ethernet deneyin."],
     };
   }
 
   return {
-    label: "Çok Kötü",
     score,
+    label: "Çok Kötü",
+    colorClass: "text-rose-700",
+    barClass: "from-rose-300 to-rose-600",
     message:
-      "Bağlantı kalitesi oldukça zayıf görünüyor. Yayınlarda ciddi donma veya kopma yaşanabilir.",
-    };
-  }
-}
-
-async function measurePing(samples = 5) {
-  const values: number[] = [];
-
-  for (let i = 0; i < samples; i += 1) {
-    const startedAt = performance.now();
-
-    await fetch(`/api/speed-test/ping?ts=${Date.now()}-${i}`, {
-      method: "GET",
-      cache: "no-store",
-    });
-
-    const endedAt = performance.now();
-    values.push(endedAt - startedAt);
-    await sleep(180);
-  }
-
-  const ping = average(values);
-  const diffs: number[] = [];
-
-  for (let i = 1; i < values.length; i += 1) {
-    diffs.push(Math.abs(values[i] - values[i - 1]));
-  }
-
-  const jitter = diffs.length ? average(diffs) : 0;
-
-  return {
-    ping: Number(ping.toFixed(1)),
-    jitter: Number(jitter.toFixed(1)),
+      "Bağlantı kaliteniz şu an stabil yayın için yetersiz görünüyor. Sorunun ana kaynağı büyük ihtimalle bağlantı hızı, gecikme veya kararsızlık.",
+    tips:
+      tips.length > 0
+        ? tips.slice(0, 4)
+        : ["Bağlantı koşulları iyileştirilmeden stabil yayın almak zor olabilir."],
   };
 }
 
-async function measureDownload() {
-  const attempts: number[] = [];
-
-  for (let i = 0; i < 3; i += 1) {
-    const start = performance.now();
-
-    const response = await fetch(`/api/speed-test/download?ts=${Date.now()}-${i}`, {
-      method: "GET",
-      cache: "no-store",
-    });
-
-    const blob = await response.blob();
-    const end = performance.now();
-
-    const bytes = blob.size;
-    const durationSeconds = Math.max((end - start) / 1000, 0.25);
-    const mbps = (bytes * 8) / durationSeconds / 1_000_000;
-
-    attempts.push(mbps);
-    await sleep(200);
-  }
-
-  return Number(average(attempts).toFixed(1));
-}
-
-async function measureUpload() {
-  const attempts: number[] = [];
-  const payload = new Uint8Array(400_000);
-
-  for (let i = 0; i < payload.length; i += 1) {
-    payload[i] = i % 255;
-  }
-
-  for (let i = 0; i < 3; i += 1) {
-    const start = performance.now();
-
-    await fetch("/api/speed-test/upload", {
-      method: "POST",
-      body: payload,
-      cache: "no-store",
-    });
-
-    const end = performance.now();
-    const durationSeconds = Math.max((end - start) / 1000, 0.25);
-    const mbps = (payload.byteLength * 8) / durationSeconds / 1_000_000;
-
-    attempts.push(mbps);
-    await sleep(200);
-  }
-
-  return Number(average(attempts).toFixed(1));
-}
-
 export default function SpeedTestPage() {
+  const [isRunning, setIsRunning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [analysisStep, setAnalysisStep] = useState("");
+  const [visualProgress, setVisualProgress] = useState(0);
+
+  const [result, setResult] = useState<TestState>({
+    ping: null,
+    download: null,
+    upload: null,
+    jitter: null,
+  });
+
   const [form, setForm] = useState<FormState>({
     username: "",
     panel: "",
@@ -284,98 +252,150 @@ export default function SpeedTestPage() {
     note: "",
   });
 
-  const [isRunning, setIsRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [phaseText, setPhaseText] = useState("Hazır");
-  const [testDone, setTestDone] = useState(false);
-  const [values, setValues] = useState<TestValues>({
-    ping: null,
-    jitter: null,
-    download: null,
-    upload: null,
-  });
-  const [result, setResult] = useState<QualityResult | null>(null);
-  const [sendState, setSendState] = useState<"idle" | "sending" | "done" | "error">(
-    "idle"
-  );
+  const quality = useMemo(() => getQualityResult(result, form), [result, form]);
 
-  async function runTest() {
-    setIsRunning(true);
-    setProgress(0);
-    setPhaseText("Hazırlanıyor...");
-    setSendState("idle");
-    setTestDone(false);
-    setResult(null);
-    setValues({
-      ping: null,
-      jitter: null,
-      download: null,
-      upload: null,
+  async function animateProgress(from: number, to: number, duration: number, stepText: string) {
+    setAnalysisStep(stepText);
+    const totalSteps = Math.max(to - from, 1);
+    const stepDelay = duration / totalSteps;
+
+    for (let i = from; i <= to; i += 1) {
+      setVisualProgress(i);
+      await sleep(stepDelay);
+    }
+  }
+
+  async function measurePing() {
+    const samples: number[] = [];
+
+    for (let i = 0; i < 4; i += 1) {
+      const start = performance.now();
+      const response = await fetch(`/api/speed-test/ping?ts=${Date.now()}-${i}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error("Ping testi başarısız oldu.");
+      }
+
+      const end = performance.now();
+      samples.push(end - start);
+    }
+
+    const average = samples.reduce((a, b) => a + b, 0) / samples.length;
+
+    let jitter = 0;
+    for (let i = 1; i < samples.length; i += 1) {
+      jitter += Math.abs(samples[i] - samples[i - 1]);
+    }
+    jitter = jitter / Math.max(samples.length - 1, 1);
+
+    return {
+      ping: average,
+      jitter,
+    };
+  }
+
+  async function measureDownload() {
+    const start = performance.now();
+
+    const response = await fetch(
+      `/api/speed-test/download?size=1000000&ts=${Date.now()}`,
+      {
+        method: "GET",
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Download testi başarısız oldu.");
+    }
+
+    const blob = await response.blob();
+    const end = performance.now();
+
+    const seconds = Math.max((end - start) / 1000, 0.001);
+    const bits = blob.size * 8;
+    return bits / seconds / 1_000_000;
+  }
+
+  async function measureUpload() {
+    const size = 300_000;
+    const bytes = new Uint8Array(size).fill(1);
+
+    const start = performance.now();
+
+    const response = await fetch("/api/speed-test/upload", {
+      method: "POST",
+      body: bytes,
+      cache: "no-store",
     });
 
+    if (!response.ok) {
+      throw new Error("Upload testi başarısız oldu.");
+    }
+
+    const end = performance.now();
+    const seconds = Math.max((end - start) / 1000, 0.001);
+    const bits = size * 8;
+    return bits / seconds / 1_000_000;
+  }
+
+  async function runTest() {
+    setError("");
+    setSubmitMessage("");
+    setIsRunning(true);
+    setVisualProgress(0);
+    setAnalysisStep("Analiz başlatılıyor...");
+
     try {
-      for (let i = 1; i <= 8; i += 1) {
-        setProgress(i);
-        await sleep(35);
-      }
-
-      setPhaseText("Gecikme analizi yapılıyor...");
+      await animateProgress(1, 18, 900, "Bağlantı hazırlanıyor...");
       const pingResult = await measurePing();
-      setValues((prev) => ({
-        ...prev,
-        ping: pingResult.ping,
-        jitter: pingResult.jitter,
-      }));
 
-      for (let i = 9; i <= 40; i += 1) {
-        setProgress(i);
-        await sleep(18);
-      }
-
-      setPhaseText("Bağlantı kararlılığı ölçülüyor...");
+      await animateProgress(19, 52, 1400, "Gecikme ve kararlılık analiz ediliyor...");
       const download = await measureDownload();
-      setValues((prev) => ({
-        ...prev,
-        download,
-      }));
 
-      for (let i = 41; i <= 75; i += 1) {
-        setProgress(i);
-        await sleep(20);
-      }
-
-      setPhaseText("Genel test tamamlanıyor...");
+      await animateProgress(53, 82, 1300, "İndirme performansı değerlendiriliyor...");
       const upload = await measureUpload();
 
-      const finalValues = {
+      await animateProgress(83, 96, 900, "Yükleme performansı değerlendiriliyor...");
+
+      setResult({
         ping: pingResult.ping,
         jitter: pingResult.jitter,
         download,
         upload,
-      };
+      });
 
-      setValues(finalValues);
-      setResult(getQualityResult(finalValues));
-
-      for (let i = 76; i <= 100; i += 1) {
-        setProgress(i);
-        await sleep(22);
-      }
-
-      setPhaseText("Test tamamlandı");
-      setTestDone(true);
-    } catch (error) {
-      console.error(error);
-      setPhaseText("Test sırasında bir hata oluştu");
+      await animateProgress(97, 100, 700, "Sonuç hazırlanıyor...");
+      setAnalysisStep("Analiz tamamlandı.");
+      await sleep(300);
+    } catch (err) {
+      console.error(err);
+      setError("Test sırasında bir hata oluştu.");
+      setAnalysisStep("");
+      setVisualProgress(0);
     } finally {
       setIsRunning(false);
     }
   }
 
-  async function sendToAdmin() {
-    if (!result) return;
+  async function submitToAdmin() {
+    setSubmitMessage("");
+    setError("");
 
-    setSendState("sending");
+    if (!quality) {
+      setError("Önce testi tamamlamanız gerekiyor.");
+      return;
+    }
+
+    if (!form.username.trim()) {
+      setError("Kullanıcı adı girmeniz gerekiyor.");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       const response = await fetch("/api/reports", {
@@ -391,131 +411,266 @@ export default function SpeedTestPage() {
           appName: form.appName,
           issueType: form.issueType,
           note: form.note,
-          ping: values.ping,
-          download: values.download,
-          upload: values.upload,
-          jitter: values.jitter,
-          qualityLabel: result.label,
-          qualityScore: result.score,
-          qualityMessage: result.message,
+          ping: result.ping,
+          download: result.download,
+          upload: result.upload,
+          jitter: result.jitter,
+          qualityLabel: quality.label,
+          qualityScore: quality.score,
+          qualityMessage: quality.message,
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data?.ok) {
-        throw new Error(data?.message || "Gönderim başarısız.");
+      if (!response.ok) {
+        throw new Error("Gönderim başarısız oldu.");
       }
 
-      setSendState("done");
-    } catch (error) {
-      console.error(error);
-      setSendState("error");
+      setSubmitMessage("Sonuç başarıyla admine gönderildi.");
+    } catch (err) {
+      console.error(err);
+      setError("Sonuç admine gönderilirken hata oluştu.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
+  function sendToAiSupport() {
+    if (!quality) {
+      setError("Önce testi tamamlamanız gerekiyor.");
+      return;
+    }
+
+    const payload = {
+      qualityLabel: quality.label,
+      qualityScore: quality.score,
+      qualityMessage: quality.message,
+      tips: quality.tips,
+      form,
+    };
+
+    sessionStorage.setItem("dealtv_ai_support_context", JSON.stringify(payload));
+    window.location.href = "/ai-support";
+  }
+
   return (
-    <main className="min-h-screen bg-[#edf0ee] px-6 py-8 text-slate-800">
-      <section className="mx-auto max-w-6xl">
-        <div className="mb-8">
-          <a href="/" className="text-sm text-slate-500 transition hover:text-slate-800">
-            ← Ana sayfaya dön
-          </a>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-            Hız Testi
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500 md:text-base">
-            Test tamamlandıktan sonra sonuç detayları kullanıcıya gösterilmez. Ölçüm bilgileri
-            yalnızca yönetim paneline gönderilir.
-          </p>
+    <main className="min-h-screen bg-[#edf0ee] text-slate-800">
+      <section className="mx-auto max-w-6xl px-6 py-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <a
+              href="/"
+              className="text-sm text-slate-500 transition hover:text-slate-800"
+            >
+              ← Ana sayfaya dön
+            </a>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-800 md:text-4xl">
+              Bağlantı Kalitesi Testi
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500 md:text-base">
+              Sistem, bağlantınızı arka planda analiz eder ve size tek bir kalite sonucu sunar.
+            </p>
+          </div>
+
+
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-[30px] border border-[#dfe5e1] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                <SpeedIcon />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">Test Başlat</h2>
-                <p className="text-sm text-slate-500">
-                  Tek tıkla bağlantı testini çalıştırın
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-8 rounded-[26px] border border-[#e7ece9] bg-[#fbfcfc] p-6">
-              <div className="relative mx-auto flex h-48 w-48 items-center justify-center">
-                <div className="absolute inset-0 rounded-full border border-slate-200" />
-                <div className="absolute inset-[16px] rounded-full border border-slate-200" />
-                <div className="absolute inset-[34px] rounded-full border border-slate-200" />
-
-                {isRunning ? (
-                  <>
-                    <div className="absolute inset-0 rounded-full border-2 border-emerald-200 animate-pulse" />
-                    <div className="absolute inset-0 rounded-full border-t-2 border-emerald-500 animate-spin" />
-                    <div className="absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-80" />
-                  </>
-                ) : null}
-
-                <div className="relative z-10 text-center">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2f7f4] text-emerald-700">
-                    {testDone ? <CheckIcon /> : <RadarIcon />}
-                  </div>
-                  <p className="text-3xl font-semibold tracking-tight">{progress}%</p>
-                  <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-400">
-                    Test Durumu
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-[30px] border border-[#dfe5e1] bg-white/92 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:p-7">
+            <div className="rounded-[24px] border border-[#e7ece9] bg-white p-5 md:p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <GaugeIcon />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-800">
+                    Test Merkezi
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                   Bağlantı Kalitenizi Ölçüp Değerleri Admine Bildirin.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6">
-                <div className="h-3 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
+              <div className="mt-6 rounded-3xl border border-[#e7ece9] bg-[#fbfcfc] p-5 md:p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Bağlantı Kalitesi
+                    </p>
+                    <h3
+                      className={`mt-2 text-3xl font-semibold ${
+                        quality?.colorClass ?? "text-slate-700"
+                      }`}
+                    >
+                      {quality ? quality.label : isRunning ? "Analiz Ediliyor" : "Hazır Değil"}
+                    </h3>
+                  </div>
+
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4f7f5] text-slate-700">
+                    <SparkIcon />
+                  </div>
                 </div>
-                <p className="mt-3 text-center text-sm font-medium text-slate-600">
-                  {phaseText}
-                </p>
+
+                <div className="mt-6">
+                  <div className="relative h-5 w-full overflow-hidden rounded-full bg-[#e5ebe7]">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r transition-all duration-300 ${
+                        isRunning
+                          ? "from-emerald-300 via-emerald-400 to-emerald-500"
+                          : quality?.barClass ?? "from-slate-300 to-slate-400"
+                      }`}
+                      style={{ width: `${isRunning ? visualProgress : quality?.score ?? 0}%` }}
+                    />
+
+                    {isRunning ? (
+                      <div
+                        className="absolute top-0 h-full w-16 animate-pulse bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-70"
+                        style={{
+                          left: `calc(${Math.max(visualProgress - 8, 0)}% - 2rem)`,
+                          transition: "left 0.25s linear",
+                        }}
+                      />
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between text-xs font-medium text-slate-400">
+                    <span>Çok Kötü</span>
+                    <span>Kötü</span>
+                    <span>Orta</span>
+                    <span>İyi</span>
+                    <span>Çok İyi</span>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-5 md:grid-cols-[220px_1fr] md:items-center">
+                  <div className="flex items-center justify-center">
+                    <div className="relative flex h-44 w-44 items-center justify-center">
+                      <div className="absolute inset-0 rounded-full border border-emerald-200" />
+                      <div className="absolute inset-[12px] rounded-full border border-emerald-200/80" />
+                      <div className="absolute inset-[24px] rounded-full border border-emerald-200/70" />
+
+                      {isRunning ? (
+                        <div className="absolute inset-0 animate-spin rounded-full border-t-2 border-emerald-500/80 border-r-2 border-r-transparent border-b-2 border-b-transparent border-l-2 border-l-transparent" />
+                      ) : null}
+
+                      {isRunning ? (
+                        <div className="absolute h-[1px] w-40 origin-center bg-gradient-to-r from-emerald-500/0 via-emerald-500/80 to-emerald-500/0 animate-spin" />
+                      ) : null}
+
+                      <div className="absolute h-3 w-3 rounded-full bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)]" />
+
+                      <div className="relative z-10 flex flex-col items-center">
+                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          Durum
+                        </span>
+                        <span className="mt-2 text-4xl font-semibold text-emerald-700">
+                          %{isRunning ? visualProgress : quality?.score ?? 0}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#e6ece8] bg-white p-4">
+                    <p className="text-sm leading-7 text-slate-600">
+                      {isRunning
+                        ? analysisStep || "Bağlantı analiz ediliyor..."
+                        : quality
+                        ? quality.message
+                        : "Test başlatıldığında bağlantınız analiz edilip kalite sonucu burada gösterilecek."}
+                    </p>
+                  </div>
+                </div>
+
+                {isRunning ? (
+                  <div className="mt-4 flex items-center gap-3 text-sm text-emerald-700">
+                    <span className="h-3 w-3 animate-pulse rounded-full bg-emerald-500" />
+                    Ölçüm sürüyor... %{visualProgress}
+                  </div>
+                ) : null}
               </div>
 
-              <button
-                type="button"
-                onClick={runTest}
-                disabled={isRunning}
-                className="mt-6 w-full rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isRunning ? "Test Devam Ediyor..." : "Hız Testini Başlat"}
-              </button>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={runTest}
+                  disabled={isRunning}
+                  className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isRunning ? "Analiz sürüyor..." : "Testi Başlat"}
+                </button>
 
-              {testDone ? (
-                <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700">
-                  Test tamamlandı. Sonuç detayları yönetim paneline gönderilmeye hazır.
+                {quality && !isRunning ? (
+                  <button
+                    type="button"
+                    onClick={sendToAiSupport}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                  >
+                    <BotIcon />
+                    AI Destekte Yorumlat
+                  </button>
+                ) : null}
+
+                <div className="text-sm text-slate-500">
+                  Sonuç birkaç saniye içinde hazırlanır.
+                </div>
+              </div>
+
+              {error ? (
+                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
                 </div>
               ) : null}
+
+              {submitMessage ? (
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {submitMessage}
+                </div>
+              ) : null}
+
+              <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5">
+                <div className="flex items-center gap-2 text-emerald-800">
+                  <ShieldIcon />
+                  <h3 className="text-base font-semibold">Akıllı Yorum</h3>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {quality && !isRunning ? (
+                    quality.tips.map((tip, index) => (
+                      <p key={index} className="text-sm leading-7 text-emerald-800/90">
+                        • {tip}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-sm leading-7 text-emerald-800/90">
+                      Test tamamlandığında bağlantınız için öneriler burada görünecek.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-[30px] border border-[#dfe5e1] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
-              <h2 className="text-xl font-semibold">Kullanıcı Bilgileri</h2>
-              <p className="mt-2 text-sm leading-7 text-slate-500">
-                Test sonrası inceleme yapılabilmesi için aşağıdaki alanları doldurun.
+          <div className="rounded-[30px] border border-[#dfe5e1] bg-white/92 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:p-7">
+            <div className="rounded-[24px] border border-[#e7ece9] bg-white p-5 md:p-6">
+              <h2 className="text-xl font-semibold text-slate-800">
+                Kullanıcı Bilgileri
+              </h2>
+              <p className="mt-2 text-sm text-slate-500">
+               Lütfen Bilgilerinizi Doğru Giriniz Aksi Halde Tam Destek Alamazsınız.
               </p>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="mt-6 space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Kullanıcı Adı
+                    Kullanıcı adı
                   </label>
                   <input
                     value={form.username}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, username: e.target.value }))
+                      setForm({ ...form, username: e.target.value })
                     }
                     className="w-full rounded-2xl border border-[#dfe7e2] bg-[#fbfcfc] px-4 py-3 outline-none transition focus:border-emerald-400"
+                    placeholder="Örn: murat123"
                   />
                 </div>
 
@@ -523,13 +678,16 @@ export default function SpeedTestPage() {
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Panel
                   </label>
-                  <input
+                  <select
                     value={form.panel}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, panel: e.target.value }))
-                    }
+                    onChange={(e) => setForm({ ...form, panel: e.target.value })}
                     className="w-full rounded-2xl border border-[#dfe7e2] bg-[#fbfcfc] px-4 py-3 outline-none transition focus:border-emerald-400"
-                  />
+                  >
+                    <option value="">Seçiniz</option>
+                    <option value="Titan">Titan</option>
+                    <option value="5G">5G</option>
+                    <option value="MPremium">MPremium</option>
+                  </select>
                 </div>
 
                 <div>
@@ -538,24 +696,20 @@ export default function SpeedTestPage() {
                   </label>
                   <input
                     value={form.device}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, device: e.target.value }))
-                    }
+                    onChange={(e) => setForm({ ...form, device: e.target.value })}
                     className="w-full rounded-2xl border border-[#dfe7e2] bg-[#fbfcfc] px-4 py-3 outline-none transition focus:border-emerald-400"
+                    placeholder="Örn: Android TV, iPhone, Box"
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Bağlantı Türü
+                    Bağlantı türü
                   </label>
                   <select
                     value={form.connectionType}
                     onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        connectionType: e.target.value,
-                      }))
+                      setForm({ ...form, connectionType: e.target.value })
                     }
                     className="w-full rounded-2xl border border-[#dfe7e2] bg-[#fbfcfc] px-4 py-3 outline-none transition focus:border-emerald-400"
                   >
@@ -567,66 +721,60 @@ export default function SpeedTestPage() {
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Kullanılan Uygulama
+                    Uygulama
                   </label>
                   <input
                     value={form.appName}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, appName: e.target.value }))
-                    }
+                    onChange={(e) => setForm({ ...form, appName: e.target.value })}
                     className="w-full rounded-2xl border border-[#dfe7e2] bg-[#fbfcfc] px-4 py-3 outline-none transition focus:border-emerald-400"
+                    placeholder="Örn: IPTV Smarters, Tivimate"
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Sorun Tipi
+                    Sorun tipi
                   </label>
                   <select
                     value={form.issueType}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, issueType: e.target.value }))
+                      setForm({ ...form, issueType: e.target.value })
                     }
                     className="w-full rounded-2xl border border-[#dfe7e2] bg-[#fbfcfc] px-4 py-3 outline-none transition focus:border-emerald-400"
                   >
                     <option>Donma</option>
                     <option>Kasma</option>
-                    <option>Kanal Açılmıyor</option>
-                    <option>Bağlantı Kopuyor</option>
-                    <option>Diğer</option>
+                    <option>Kalite Düşmesi</option>
+                    <option>Açılmama</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                    Not
+                  </label>
+                  <textarea
+                    value={form.note}
+                    onChange={(e) => setForm({ ...form, note: e.target.value })}
+                    rows={4}
+                    className="w-full rounded-2xl border border-[#dfe7e2] bg-[#fbfcfc] px-4 py-3 outline-none transition focus:border-emerald-400"
+                    placeholder="Ek açıklama yazabilirsiniz"
+                  />
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Kısa Not
-                </label>
-                <textarea
-                  rows={4}
-                  value={form.note}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, note: e.target.value }))
-                  }
-                  className="w-full rounded-2xl border border-[#dfe7e2] bg-[#fbfcfc] px-4 py-3 outline-none transition focus:border-emerald-400"
-                />
-              </div>
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={submitToAdmin}
+                  disabled={isRunning || isSubmitting || !quality}
+                  className="w-full rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmitting ? "Gönderiliyor..." : "Sonucu Admine Gönder"}
+                </button>
 
-              <button
-                type="button"
-                onClick={sendToAdmin}
-                disabled={!testDone || sendState === "sending"}
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-800 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <SendIcon />
-                {sendState === "sending"
-                  ? "Gönderiliyor..."
-                  : sendState === "done"
-                  ? "Sonuç Admine Gönderildi"
-                  : sendState === "error"
-                  ? "Gönderim Başarısız"
-                  : "Sonucu Admine Gönder"}
-              </button>
+
+              </div>
             </div>
           </div>
         </div>

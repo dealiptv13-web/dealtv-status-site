@@ -1,7 +1,11 @@
 import { headers } from "next/headers";
-import { getPanelStyle, readPanels } from "@/lib/panel-store";
-import WelcomeNotice from "@/components/site/WelcomeNotice";
-import SiteIntroLoader from "@/components/site/SiteIntroLoader";
+import { getPanelStyle, readPanels } from "../lib/panel-store";
+import WelcomeNotice from "../components/site/WelcomeNotice";
+import SiteIntroLoader from "../components/site/SiteIntroLoader";
+import NetworkInfoCards from "../components/site/NetworkInfoCards";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type Action = {
   title: string;
@@ -43,25 +47,6 @@ function CheckIcon() {
   );
 }
 
-function GlobeIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3 12h18" />
-      <path d="M12 3a15 15 0 0 1 0 18" />
-      <path d="M12 3a15 15 0 0 0 0 18" />
-    </svg>
-  );
-}
-
 function ServerIcon() {
   return (
     <svg
@@ -77,22 +62,6 @@ function ServerIcon() {
       <rect x="3" y="14" width="18" height="6" rx="2" />
       <path d="M7 7h.01" />
       <path d="M7 17h.01" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" />
     </svg>
   );
 }
@@ -160,13 +129,13 @@ export default async function HomePage() {
   const actions: Action[] = [
     {
       title: "Hız Testi",
-      text: "Bağlantı kaliteni test et, sonucu analiz ettir ve admine gönder.",
+      text: "Bağlantı testini çalıştırın ve sonucu doğrudan admine gönderin.",
       href: "/speed-test",
       icon: <SpeedIcon />,
     },
     {
       title: "AI Destek",
-      text: "Kurulum, donma, cihaz ve panel soruların için akıllı destek alanı.",
+      text: "Kurulum, donma, cihaz ve panel sorularınız için akıllı destek alanı.",
       href: "/ai-support",
       icon: <BotIcon />,
     },
@@ -192,10 +161,10 @@ export default async function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-800">
-              DealTV Destek Paneli
+              DealTV Control
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Sistem Durumunu Kontrol Edebilir, Hız Testi Yapabilir, Yapay Zeka Desteğini Kullanabilirsiniz.
+              Sistem durumu, hız testi ve AI destek merkezi
             </p>
           </div>
 
@@ -296,38 +265,7 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-[#e7ece9] bg-[#fbfcfc] p-5">
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  <GlobeIcon />
-                  Konum
-                </p>
-                <p className="mt-3 text-base font-semibold text-slate-800">
-                  Tespit ediliyor
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-[#e7ece9] bg-[#fbfcfc] p-5">
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  <ServerIcon />
-                  Sağlayıcı
-                </p>
-                <p className="mt-3 text-base font-semibold text-slate-800">
-                  Tespit ediliyor
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-[#e7ece9] bg-[#fbfcfc] p-5">
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  <ShieldIcon />
-                  Durum
-                </p>
-                <p className="mt-3 flex items-center gap-2 text-base font-semibold text-emerald-700">
-                  <Dot className="bg-emerald-500" />
-                  Engel Yok
-                </p>
-              </div>
-            </div>
+            <NetworkInfoCards />
 
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               {panels.map((panel) => {
@@ -373,8 +311,7 @@ export default async function HomePage() {
                   <p className="mt-2 text-sm leading-7 text-emerald-700/90">
                     Sistem genelinde büyük bir erişim problemi görünmüyor.
                     Panel bazlı durum değişiklikleri, bakım süreçleri ve güncel
-                    bilgilendirmeler bu ekran üzerinden sade şekilde
-                    paylaşılabilir.
+                    bilgilendirmeler bu ekran üzerinden sade şekilde paylaşılabilir.
                   </p>
                 </div>
               </div>
