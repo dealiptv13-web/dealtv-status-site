@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+
+
 
 type QualityLabel = "Çok İyi" | "İyi" | "Orta" | "Kötü" | "Çok Kötü";
 
