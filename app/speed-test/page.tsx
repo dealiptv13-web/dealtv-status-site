@@ -1,14 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
-type QualityLabel = "Çok İyi" | "İyi" | "Orta" | "Kötü" | "Çok Kötü";
-
-type QualityResult = {
-  label: QualityLabel;
-  score: number;
-  message: string;
-};
+import { useState } from "react";
 
 type FormState = {
   username: string;
@@ -25,6 +17,14 @@ type TestValues = {
   jitter: number | null;
   download: number | null;
   upload: number | null;
+};
+
+type QualityLabel = "Çok İyi" | "İyi" | "Orta" | "Kötü" | "Çok Kötü";
+
+type QualityResult = {
+  label: QualityLabel;
+  score: number;
+  message: string;
 };
 
 function SpeedIcon() {
@@ -75,6 +75,22 @@ function SendIcon() {
     >
       <path d="M22 2 11 13" />
       <path d="M22 2 15 22l-4-9-9-4 20-7Z" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 6 9 17l-5-5" />
     </svg>
   );
 }
@@ -133,7 +149,7 @@ function getQualityResult(values: TestValues): QualityResult {
       label: "Çok İyi",
       score,
       message:
-        "Bağlantı kaliteniz oldukça iyi görünüyor. Donma veya kasma sorunu büyük ihtimalle internet bağlantısından değil; cihaz, uygulama veya panel yoğunluğundan kaynaklanıyor olabilir.",
+        "Bağlantı kalitesi oldukça iyi görünüyor. Sorun internetten çok cihaz, uygulama veya panel yoğunluğundan kaynaklanıyor olabilir.",
     };
   }
 
@@ -142,7 +158,7 @@ function getQualityResult(values: TestValues): QualityResult {
       label: "İyi",
       score,
       message:
-        "Bağlantınız genel olarak iyi durumda. Küçük sorunlar anlık ağ dalgalanması, uygulama performansı veya cihaz kaynaklı olabilir.",
+        "Bağlantı genel olarak iyi durumda. Küçük dalgalanmalar dışında ciddi bir problem görünmüyor.",
     };
   }
 
@@ -151,7 +167,7 @@ function getQualityResult(values: TestValues): QualityResult {
       label: "Orta",
       score,
       message:
-        "Bağlantınız kullanılabilir seviyede ancak tam stabil görünmüyor. Özellikle Wi-Fi kullanıyorsanız modeme yakın konumda veya Ethernet ile tekrar test etmek faydalı olabilir.",
+        "Bağlantı kullanılabilir seviyede ancak tam stabil görünmüyor. Özellikle Wi-Fi kullanıyorsanız tekrar kontrol faydalı olabilir.",
     };
   }
 
@@ -160,7 +176,7 @@ function getQualityResult(values: TestValues): QualityResult {
       label: "Kötü",
       score,
       message:
-        "Bağlantı kaliteniz düşük görünüyor. Donma ve kasma sorunlarının internet bağlantısından kaynaklanma ihtimali yüksek.",
+        "Bağlantı kalitesi düşük görünüyor. Donma ve kasma internet bağlantısından kaynaklanıyor olabilir.",
     };
   }
 
@@ -168,38 +184,8 @@ function getQualityResult(values: TestValues): QualityResult {
     label: "Çok Kötü",
     score,
     message:
-      "Bağlantı kaliteniz oldukça zayıf görünüyor. Bu durumda yayınlarda ciddi donma, çözünürlük düşmesi veya bağlantı kopmaları yaşanabilir.",
-  };
-}
-
-function getQualityStyle(label: QualityLabel) {
-  switch (label) {
-    case "Çok İyi":
-      return {
-        badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
-        bar: "bg-emerald-500",
-      };
-    case "İyi":
-      return {
-        badge: "border-lime-200 bg-lime-50 text-lime-700",
-        bar: "bg-lime-500",
-      };
-    case "Orta":
-      return {
-        badge: "border-amber-200 bg-amber-50 text-amber-700",
-        bar: "bg-amber-500",
-      };
-    case "Kötü":
-      return {
-        badge: "border-orange-200 bg-orange-50 text-orange-700",
-        bar: "bg-orange-500",
-      };
-    case "Çok Kötü":
-    default:
-      return {
-        badge: "border-rose-200 bg-rose-50 text-rose-700",
-        bar: "bg-rose-500",
-      };
+      "Bağlantı kalitesi oldukça zayıf görünüyor. Yayınlarda ciddi donma veya kopma yaşanabilir.",
+    };
   }
 }
 
@@ -301,6 +287,7 @@ export default function SpeedTestPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [phaseText, setPhaseText] = useState("Hazır");
+  const [testDone, setTestDone] = useState(false);
   const [values, setValues] = useState<TestValues>({
     ping: null,
     jitter: null,
@@ -312,16 +299,12 @@ export default function SpeedTestPage() {
     "idle"
   );
 
-  const qualityStyle = useMemo(
-    () => (result ? getQualityStyle(result.label) : null),
-    [result]
-  );
-
   async function runTest() {
     setIsRunning(true);
     setProgress(0);
     setPhaseText("Hazırlanıyor...");
     setSendState("idle");
+    setTestDone(false);
     setResult(null);
     setValues({
       ping: null,
@@ -361,7 +344,7 @@ export default function SpeedTestPage() {
         await sleep(20);
       }
 
-      setPhaseText("Genel kalite puanı hesaplanıyor...");
+      setPhaseText("Genel test tamamlanıyor...");
       const upload = await measureUpload();
 
       const finalValues = {
@@ -372,24 +355,15 @@ export default function SpeedTestPage() {
       };
 
       setValues(finalValues);
+      setResult(getQualityResult(finalValues));
 
-      for (let i = 76; i <= 96; i += 1) {
+      for (let i = 76; i <= 100; i += 1) {
         setProgress(i);
-        await sleep(24);
+        await sleep(22);
       }
 
-      const quality = getQualityResult(finalValues);
-      setResult(quality);
-
-      setPhaseText("Sonuç hazırlanıyor...");
-      await sleep(500);
-
-      for (let i = 97; i <= 100; i += 1) {
-        setProgress(i);
-        await sleep(40);
-      }
-
-      setPhaseText("Tamamlandı");
+      setPhaseText("Test tamamlandı");
+      setTestDone(true);
     } catch (error) {
       console.error(error);
       setPhaseText("Test sırasında bir hata oluştu");
@@ -448,11 +422,11 @@ export default function SpeedTestPage() {
             ← Ana sayfaya dön
           </a>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-            Bağlantı Kalite Testi
+            Hız Testi
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500 md:text-base">
-            Bu test doğrudan hız değeri göstermek yerine bağlantı kalitenizi analiz eder ve
-            sonucu sade bir kalite seviyesi olarak sunar.
+            Test tamamlandıktan sonra sonuç detayları kullanıcıya gösterilmez. Ölçüm bilgileri
+            yalnızca yönetim paneline gönderilir.
           </p>
         </div>
 
@@ -465,7 +439,7 @@ export default function SpeedTestPage() {
               <div>
                 <h2 className="text-xl font-semibold">Test Başlat</h2>
                 <p className="text-sm text-slate-500">
-                  Tek tıkla bağlantı kalitenizi analiz edin
+                  Tek tıkla bağlantı testini çalıştırın
                 </p>
               </div>
             </div>
@@ -486,7 +460,7 @@ export default function SpeedTestPage() {
 
                 <div className="relative z-10 text-center">
                   <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2f7f4] text-emerald-700">
-                    <RadarIcon />
+                    {testDone ? <CheckIcon /> : <RadarIcon />}
                   </div>
                   <p className="text-3xl font-semibold tracking-tight">{progress}%</p>
                   <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-400">
@@ -513,56 +487,22 @@ export default function SpeedTestPage() {
                 disabled={isRunning}
                 className="mt-6 w-full rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isRunning ? "Test Devam Ediyor..." : "Kalite Testini Başlat"}
+                {isRunning ? "Test Devam Ediyor..." : "Hız Testini Başlat"}
               </button>
+
+              {testDone ? (
+                <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700">
+                  Test tamamlandı. Sonuç detayları yönetim paneline gönderilmeye hazır.
+                </div>
+              ) : null}
             </div>
           </div>
 
           <div className="space-y-6">
             <div className="rounded-[30px] border border-[#dfe5e1] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
-              <h2 className="text-xl font-semibold">Sonuç Analizi</h2>
+              <h2 className="text-xl font-semibold">Kullanıcı Bilgileri</h2>
               <p className="mt-2 text-sm leading-7 text-slate-500">
-                Test tamamlandığında bağlantı kalitenizin genel değerlendirmesi burada görünür.
-              </p>
-
-              <div className="mt-6 rounded-3xl border border-[#e7ece9] bg-[#fbfcfc] p-5">
-                {result ? (
-                  <>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span
-                        className={`rounded-full border px-4 py-2 text-sm font-semibold ${qualityStyle?.badge}`}
-                      >
-                        {result.label}
-                      </span>
-
-                      <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                        Kalite Puanı: %{result.score}
-                      </span>
-                    </div>
-
-                    <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-200">
-                      <div
-                        className={`h-full rounded-full ${qualityStyle?.bar}`}
-                        style={{ width: `${result.score}%` }}
-                      />
-                    </div>
-
-                    <p className="mt-5 text-sm leading-7 text-slate-700">
-                      {result.message}
-                    </p>
-                  </>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-[#d8e0da] bg-white px-4 py-6 text-sm text-slate-500">
-                    Henüz sonuç oluşmadı. Testi başlatınca kalite değerlendirmesi burada görünecek.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-[30px] border border-[#dfe5e1] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)]">
-              <h2 className="text-xl font-semibold">Admine Sonuç Gönder</h2>
-              <p className="mt-2 text-sm leading-7 text-slate-500">
-                Sonucu yönetime iletmek için aşağıdaki alanları doldurabilirsiniz.
+                Test sonrası inceleme yapılabilmesi için aşağıdaki alanları doldurun.
               </p>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -675,14 +615,14 @@ export default function SpeedTestPage() {
               <button
                 type="button"
                 onClick={sendToAdmin}
-                disabled={!result || sendState === "sending"}
+                disabled={!testDone || sendState === "sending"}
                 className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-800 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <SendIcon />
                 {sendState === "sending"
                   ? "Gönderiliyor..."
                   : sendState === "done"
-                  ? "Sonuç Gönderildi"
+                  ? "Sonuç Admine Gönderildi"
                   : sendState === "error"
                   ? "Gönderim Başarısız"
                   : "Sonucu Admine Gönder"}
