@@ -1,5 +1,4 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { supabase } from "./supabase";
 
 export type NoticeBlock = {
   enabled: boolean;
@@ -12,9 +11,6 @@ export type SiteNoticeSettings = {
   welcomeNotice: NoticeBlock;
   specialNotice: NoticeBlock;
 };
-
-const dataDir = path.join(process.cwd(), "data");
-const noticeFile = path.join(dataDir, "site-notice.json");
 
 const defaultNotice: SiteNoticeSettings = {
   welcomeNotice: {
@@ -32,46 +28,109 @@ const defaultNotice: SiteNoticeSettings = {
   },
 };
 
-async function ensureNoticeFile() {
-  await fs.mkdir(dataDir, { recursive: true });
+async function ensureSeed() {
+  const { data, error } = await supabase
+    .from("site_notice")
+    .select("id")
+    .in("id", ["welcome", "special"]);
 
-  try {
-    await fs.access(noticeFile);
-  } catch {
-    await fs.writeFile(noticeFile, JSON.stringify(defaultNotice, null, 2), "utf8");
-    return;
+  if (error) {
+    throw error;
   }
 
-  try {
-    const raw = await fs.readFile(noticeFile, "utf8");
-    const parsed = JSON.parse(raw);
+  const existingIds = new Set((data || []).map((item) => item.id));
+  const inserts = [];
 
-    if (!parsed.welcomeNotice || !parsed.specialNotice) {
-      const merged: SiteNoticeSettings = {
-        welcomeNotice: {
-          ...defaultNotice.welcomeNotice,
-          ...(parsed.welcomeNotice || parsed),
-        },
-        specialNotice: {
-          ...defaultNotice.specialNotice,
-          ...(parsed.specialNotice || {}),
-        },
-      };
+  if (!existingIds.has("welcome")) {
+    inserts.push({
+      id: "welcome",
+      enabled: defaultNotice.welcomeNotice.enabled,
+      title: defaultNotice.welcomeNotice.title,
+      message: defaultNotice.welcomeNotice.message,
+      duration_seconds: defaultNotice.welcomeNotice.durationSeconds,
+    });
+  }
 
-      await fs.writeFile(noticeFile, JSON.stringify(merged, null, 2), "utf8");
+  if (!existingIds.has("special")) {
+    inserts.push({
+      id: "special",
+      enabled: defaultNotice.specialNotice.enabled,
+      title: defaultNotice.specialNotice.title,
+      message: defaultNotice.specialNotice.message,
+      duration_seconds: defaultNotice.specialNotice.durationSeconds,
+    });
+  }
+
+  if (inserts.length > 0) {
+    const { error: insertError } = await supabase
+      .from("site_notice")
+      .insert(inserts);
+
+    if (insertError) {
+      throw insertError;
     }
-  } catch {
-    await fs.writeFile(noticeFile, JSON.stringify(defaultNotice, null, 2), "utf8");
   }
 }
 
 export async function readSiteNotice(): Promise<SiteNoticeSettings> {
-  await ensureNoticeFile();
-  const raw = await fs.readFile(noticeFile, "utf8");
-  return JSON.parse(raw) as SiteNoticeSettings;
+  await ensureSeed();
+
+  const { data, error } = await supabase
+    .from("site_notice")
+    .select("id,enabled,title,message,duration_seconds");
+
+  if (error) {
+    throw error;
+  }
+
+  const welcome = data?.find((item) => item.id === "welcome");
+  const special = data?.find((item) => item.id === "special");
+
+  return {
+    welcomeNotice: {
+      enabled: welcome?.enabled ?? defaultNotice.welcomeNotice.enabled,
+      title: welcome?.title ?? defaultNotice.welcomeNotice.title,
+      message: welcome?.message ?? defaultNotice.welcomeNotice.message,
+      durationSeconds:
+        welcome?.duration_seconds ?? defaultNotice.welcomeNotice.durationSeconds,
+    },
+    specialNotice: {
+      enabled: special?.enabled ?? defaultNotice.specialNotice.enabled,
+      title: special?.title ?? defaultNotice.specialNotice.title,
+      message: special?.message ?? defaultNotice.specialNotice.message,
+      durationSeconds:
+        special?.duration_seconds ?? defaultNotice.specialNotice.durationSeconds,
+    },
+  };
 }
 
 export async function writeSiteNotice(settings: SiteNoticeSettings) {
-  await ensureNoticeFile();
-  await fs.writeFile(noticeFile, JSON.stringify(settings, null, 2), "utf8");
+  const rows = [
+    {
+      id: "welcome",
+      enabled: settings.welcomeNotice.enabled,
+      title: settings.welcomeNotice.title,
+      message: settings.welcomeNotice.message,
+      duration_seconds: settings.welcomeNotice.durationSeconds,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: "special",
+      enabled: settings.specialNotice.enabled,
+      title: settings.specialNotice.title,
+      message: settings.specialNotice.message,
+      duration_seconds: settings.specialNotice.durationSeconds,
+      updated_at: new Date().toISOString(),
+    },
+  ];
+
+  const { error } = await supabase.from("site_notice").upsert(rows, {
+    onConflict: "id",
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return settings;
 }
